@@ -1,0 +1,1115 @@
+openapi: 3.0.4
+info:
+  title: Swagger Social Network System(SNS) - OpenAPI 3.0
+  description: |-
+    This is a sample Social Network System based on the OpenAPI 3.0 specification.  
+    You can find out more about Swagger at [https://swagger.io](https://swagger.io).
+  version: 1.0.0
+tags:
+  - name: posts
+    description: Endpoints to create, retrieve, update, and delete user posts, including post content, images, and hashtags
+  - name: reactions
+    description: Endpoints to add, remove, and view reactions (like, love, etc.) on posts.
+  - name: comments
+    description: Endpoints to add, retrieve, update, and delete comments on posts.
+  - name: user
+    description: Endpoints for user management, including fetching user profiles and updating personal information.
+  - name: auth
+    description: Endpoints for user authentication and authorization using OAuth2, including login, token issuance, and logout.
+paths:
+  /posts:
+    get:
+      tags:
+        - posts
+      summary: Get personalized feed
+      description: Retrieve posts from users that the authenticated user follows.
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: limit
+          in: query
+          description: Number of posts to return
+          schema:
+            type: integer
+            default: 12
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successfully retrieved personalized feed
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+              example:
+                - id: "f3f4c240-1e2b-4b2e-8b7a-b60d8c41ef43"
+                  user_id: "550e8400-e29b-41d4-a716-446655440000"
+                  text: "Morning workout️️"
+                  images:
+                    - "https://sns.com/images/workout.jpg"
+                    - "https://sns.com/images/workout2.jpg"
+                  hashtags: ["#fitness", "#morning"]
+                  created_at: "2025-10-13T07:00:00Z"
+                  reactions_count: 12
+                  comments_count: 4
+                  author:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    login: "fit_user"
+                    created_at: "2025-10-11T07:00:00Z"
+        '401':
+          description: Unauthorized — access token missing or invalid
+        '403':
+          description: Forbidden — access denied
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    post:
+      tags:
+        - posts
+      summary: Create a new post
+      description: Creates a new post for the currently authenticated user.
+      security:
+        - sns_oauth: [write]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Text content of the post
+                  example: "Enjoying a sunny day!"
+                images:
+                  type: array
+                  description: List of uploaded images
+                  items:
+                    type: string
+                    format: binary
+                hashtags:
+                  type: array
+                  description: Hashtags associated with the post
+                  items:
+                    type: string
+                  example: ["#sunshine", "#relax"]
+      responses:
+        '201':
+          description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+              example:
+                id: "a3e25f22-89f8-4b20-bb63-efb64c784fc0"
+                user_id: "550e8400-e29b-41d4-a716-446655440000"
+                text: "Enjoying a sunny day!"
+                hashtags: ["#sunshine", "#relax"]
+                images: ["/uploads/post1.jpg"]
+                created_at: "2025-10-13T10:30:00Z"
+  /posts/search:
+    get:
+      tags:
+        - posts
+      summary: Search posts by hashtag
+      description: Retrieve posts containing a specific hashtag. Returns posts sorted by creation date (newest first).
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: hashtag
+          in: query
+          required: true
+          description: Hashtag to search for (without #)
+          schema:
+            type: string
+            example: "hello"
+        - name: limit
+          in: query
+          description: Number of posts to return (default 10)
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successfully retrieved posts with the specified hashtag
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+              example:
+                - id: "0b1c6baf-d3f5-4d3a-98a2-c6e4a06bca1d"
+                  user_id: "550e8400-e29b-41d4-a716-446655440000"
+                  text: "My first post!"
+                  images:
+                    - "https://cdn.sns.com/uploads/2025/10/photo1.jpg"
+                  hashtags: ["hello", "firstpost"]
+                  created_at: "2025-10-13T14:00:00Z"
+                - id: "1c2d3e4f-5678-4abc-91de-1234567890ab"
+                  user_id: "6627b700-d2d0-4c4a-b9f1-cf76a39f9b32"
+                  text: "Hello world!"
+                  images: []
+                  hashtags: ["hello"]
+                  created_at: "2025-10-13T15:20:00Z"
+        '404':
+          description: No posts found with the specified hashtag
+  /posts/search/text:
+    get:
+      tags:
+        - posts
+      summary: Search posts by text
+      description: Retrieve posts containing specific text. Returns posts sorted by creation date (newest first).
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Text query to search in posts
+          schema:
+            type: string
+            example: "hello world"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successfully retrieved posts matching query
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Post'
+        '404':
+          description: No posts found
+  /posts/{post_id}:
+    get:
+      tags:
+        - posts
+      summary: Get post by ID
+      description: Retrieve a single post with details such as text, images, hashtags, reactions, and comments.
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successfully retrieved post
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+              example:
+                id: "0b1c6baf-d3f5-4d3a-98a2-c6e4a06bca1d"
+                user:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  login: "user1"
+                text: "My first post!"
+                images:
+                  - "https://cdn.sns.com/uploads/2025/10/photo1.jpg"
+                hashtags: ["#hello", "#firstpost"]
+                reactions_count: 12
+                comments_count: 5
+                created_at: "2025-10-13T14:00:00Z"
+        '404':
+          description: Post not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      tags:
+        - posts
+      summary: Update an existing post
+      description: Updates a post created by the currently authenticated user.Only the author of the post can modify it.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post to update
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Updated post text
+                hashtags:
+                  type: array
+                  description: Updated list of hashtags
+                  items:
+                    type: string
+              example:
+                text: "Updated caption!"
+                hashtags: ["#updated"]
+      responses:
+        '200':
+          description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '403':
+          description: Forbidden – user is not the author of the post
+        '404':
+          description: Post not found
+    delete:
+      tags:
+        - posts
+      summary: Delete a post
+      description: Deletes a post created by the currently authenticated user.Only the author can delete their post.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post to delete
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Post deleted successfully
+        '403':
+          description: Forbidden – user is not the author of the post
+        '404':
+          description: Post not found
+  /posts/{post_id}/comments:
+    post:
+      tags:
+        - comments
+      summary: Add a comment to a post
+      description: Create a new comment on a post. The authenticated user becomes the comment author.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post to comment on
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Comment text
+                  example: "This post is awesome!"
+      responses:
+        '201':
+          description: Comment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+              example:
+                id: "b2b7128c-8e10-4ab3-bb44-8bb6e38b17f2"
+                user:
+                  id: "6627b700-d2d0-4c4a-b9f1-cf76a39f9b32"
+                  login: "john_doe"
+                text: "This post is awesome!"
+                created_at: "2025-10-13T15:30:00Z"
+        '404':
+          description: Post not found
+    get:
+      tags:
+        - comments
+      summary: Get comments for a post
+      description: Retrieve the first 10 comments for a specific post, sorted by creation date (newest last).
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          description: Number of comments to return (default 10)
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Pagination offset
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Successfully retrieved comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Comment'
+              example:
+                - id: "b2b7128c-8e10-4ab3-bb44-8bb6e38b17f2"
+                  user:
+                    id: "6627b700-d2d0-4c4a-b9f1-cf76a39f9b32"
+                    login: "jane_doe"
+                  text: "Nice post!"
+                  created_at: "2025-10-13T15:05:00Z"
+                - id: "c4127b70-6a44-4331-a1a2-920b6a58c7cb"
+                  user:
+                    id: "550e8400-e29b-41d4-a716-446655440000"
+                    login: "user1"
+                  text: "Thanks!"
+                  created_at: "2025-10-13T15:07:00Z"
+        '404':
+          description: Post not found
+  /posts/{post_id}/comments/{comment_id}:
+    put:
+      tags:
+        - comments
+      summary: Update a comment
+      description: Update an existing comment. Only the comment author can edit.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post
+          schema:
+            type: string
+            format: uuid
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                text:
+                  type: string
+                  description: Updated comment text
+              required:
+                - text
+      responses:
+        '200':
+          description: Comment updated successfully
+        '403':
+          description: Forbidden – user is not the comment author
+        '404':
+          description: Comment not found
+    delete:
+      tags:
+        - comments
+      summary: Delete a comment
+      description: Delete an existing comment. Only the comment author can delete.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post
+          schema:
+            type: string
+            format: uuid
+        - name: comment_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Comment deleted successfully
+        '403':
+          description: Forbidden – user is not the comment author
+        '404':
+          description: Comment not found
+  /posts/{post_id}/reactions:
+    get:
+      tags:
+        - reactions
+      summary: Get all reactions for a post
+      description: Retrieve a list of reactions for the specified post.
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of reactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_id:
+                      type: string
+                      format: uuid
+                    type:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+        '404':
+          description: Post not found
+    post:
+      tags:
+        - reactions
+      summary: Add a reaction to a post
+      description: Add a reaction (like, dislike, etc.) to a post. The authenticated user can react only once per post.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post to react to
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  description: Type of reaction
+                  enum: [like, dislike, love, laugh, sad, angry]
+                  example: like
+      responses:
+        '201':
+          description: Reaction added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  post_id:
+                    type: string
+                    format: uuid
+                  user_id:
+                    type: string
+                    format: uuid
+                  type:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+              example:
+                post_id: "0b1c6baf-d3f5-4d3a-98a2-c6e4a06bca1d"
+                user_id: "550e8400-e29b-41d4-a716-446655440000"
+                type: "like"
+                created_at: "2025-10-13T16:00:00Z"
+        '400':
+          description: Invalid reaction type
+        '404':
+          description: Post not found
+        '409':
+          description: User has already reacted with this type
+    delete:
+      tags:
+        - reactions
+      summary: Remove reaction from a post
+      description: Remove the authenticated user's reaction from a post.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: post_id
+          in: path
+          required: true
+          description: UUID of the post
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          required: true
+          description: Type of reaction to remove
+          schema:
+            type: string
+            enum: [like, dislike, love, laugh, sad, angry]
+            example: like
+      responses:
+        '204':
+          description: Reaction removed successfully — no content returned
+        '404':
+          description: Post or reaction not found
+  /auth/authorize:
+    get:
+      tags:
+        - auth
+      summary: Authorize user
+      description: Redirects user to login/consent screen. After entering correct credentials or use external services, user get authorization_code.
+      operationId: createUser
+      parameters:
+      - in: query
+        name: response_type
+        schema:
+          type: string
+          enum: [code]
+        required: true
+        description: OAuth2 response type
+        example: "code"
+      - in: query
+        name: client_id
+        schema:
+          type: string
+        required: true
+        description: SNS Client ID
+        example: "sns-client-id"
+      - in: query
+        name: redirect_uri
+        schema:
+          type: string
+        required: true
+        description: URL to redirect after authorization
+        example: "https://sns.com/callback"
+      - in: query
+        name: scope
+        schema:
+          type: string
+        description: Requested OAuth2 scopes
+        example: "read write"
+      - in: query
+        name: state
+        schema:
+          type: string
+        description: CSRF protection value
+        example: "123state"
+      responses:
+        '302':
+          description: Redirect to login page or consent screen
+          content: {}
+          headers:
+            Location:
+              description: URL where user should be redirected
+              schema:
+                type: string
+                example: "https://sns.authserver.com/login?client_id=sns-client-id&state=123state"
+  /auth/token:
+    post:
+      tags:
+        - auth
+      summary: Get OAuth2 token
+      description: Exchange authorization code or credentials for an access token. 
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code, password, client_credentials, refresh_token]
+                code:
+                  type: string
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+                redirect_uri:
+                  type: string
+              required: [grant_type]
+            example:
+              grant_type: "authorization_code_from_authorization_server"
+              code: "your_code"
+              client_id: "your_public_client_id"
+              client_secret: "your_private_client_secret"
+              redirect_uri: "https://sns.com/callback"
+      responses:
+        '200':
+          description: Access token response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                  refresh_token:
+                    type: string
+              example:
+                access_token: "Your_New_Access_Token"
+                token_type: "Bearer"
+                expires_in: 3600
+                refresh_token: "Your_New_Refresh_Token"
+  /auth/logout:
+    post:
+      tags:
+        - auth
+      summary: Logout user
+      description: Revoke current access token and end user session
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Access token to revoke (optional if using Authorization header)
+                  example: "your_access_tokem"
+              example:
+                token: "token"
+      responses:
+        '204':
+          description: Successfully logged out — token revoked, no content returned
+          content: {}
+        '401':
+          description: Unauthorized — token is missing or invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "invalid_token"
+                  message:
+                    type: string
+                    example: "Access token is missing, expired, or invalid"
+  /user/{user_id}:
+    get:
+      tags:
+        - user
+      summary: Get user by user ID
+      description: Retrieve basic user profile information.
+      operationId: getUserById
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: user_id
+          in: path
+          description: The UUID of the user to fetch
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                login: "user1"
+                created_at: "2025-10-12T14:00:00Z"
+        '400':
+          description: Invalid username supplied
+        '404':
+          description: User not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    put:
+      tags:
+        - user
+      summary: Update user login
+      description: This can only be done by the logged in user. Only the `login` field can be updated.
+      operationId: updateUserLogin
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: user_id
+          in: path
+          description: UUID of the user to update
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        description: Update user login
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                login:
+                  type: string
+                  description: New login for the user
+                  example: "new_user_login"
+              required:
+                - login
+      responses:
+        '200':
+          description: Login updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  login:
+                    type: string
+                  updated_at:
+                    type: string
+                    format: date-time
+              example:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+                login: "new_user_login"
+                updated_at: "2025-10-12T15:00:00Z"
+        '400':
+          description: Bad request — invalid login
+        '401':
+          description: Unauthorized — invalid or missing access token
+        '403':
+          description: Forbidden — user cannot modify another user
+        '404':
+          description: User not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+    delete:
+      tags:
+        - user
+      summary: Delete user resource.
+      description: This can only be done by the logged in user.
+      operationId: deleteUser
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: user_id
+          in: path
+          description: The UUID of the user to delete
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: User deleted
+        '400':
+          description: Invalid username supplied
+        '404':
+          description: User not found
+        default:
+          description: Unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /user/{user_id}/follow:
+    post:
+      tags:
+        - user
+      summary: Follow a user
+      description: Follow another user
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: user_id
+          in: path
+          description: The UUID of the user to follow
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successfully followed the user
+        '400':
+          description: Invalid user ID
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
+  /user/{user_id}/unfollow:
+    post:
+      tags:
+        - user
+      summary: Unfollow a user
+      description: Stop following the specified user.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: user_id
+          in: path
+          description: The UUID of the user to unfollow
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successfully unfollowed the user
+        '401':
+          description: Unauthorized
+        '404':
+          description: User not found
+  /user/{user_id}/followers:
+    get:
+      tags:
+        - user
+      summary: Get followers of a user
+      description: Retrieve a list of users who follow the specified user.
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of followers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+  /user/{user_id}/following:
+    get:
+      tags:
+        - user
+      summary: Get users followed by this user
+      description: Retrieve a list of users that the specified user follows.
+      security:
+        - sns_oauth: [read]
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of users this user follows
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+  /images:
+    post:
+      tags:
+        - posts
+      summary: Upload an image
+      description: Upload a binary image file to attach to posts.
+      security:
+        - sns_oauth: [write]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to upload
+      responses:
+        '201':
+          description: Image uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  image_url:
+                    type: string
+                    example: "https://cdn.sns.com/uploads/2025/10/image123.jpg"
+  /images/{image_id}:
+    delete:
+      tags:
+        - posts
+      summary: Delete an uploaded image
+      description: Delete an uploaded image by its ID.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: image_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Image deleted successfully
+        '404':
+          description: Image not found
+components:
+  schemas:
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440001"
+        userId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440002"
+        text:
+          type: string
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+        hashtags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        reactions_count:
+          type: integer
+        comments_count:
+          type: integer
+        author:
+          $ref: '#/components/schemas/User'
+    Comment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 1
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            login:
+              type: string
+        text:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        login:
+          type: string
+          example: rocky99
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-10-12T14:00:00Z"
+      xml:
+        name: user
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+      required:
+        - code
+        - message
+  securitySchemes:
+    sns_oauth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://sns.com/auth/authorize
+          tokenUrl: https://sns.com/auth/token
+          scopes:
+            read: Read user data
+            write: Modify user data
+    api_key:
+      type: apiKey
+      name: api_key
+      in: header
