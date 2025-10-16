@@ -116,22 +116,56 @@ paths:
                 hashtags: ["#sunshine", "#relax"]
                 images: ["/uploads/post1.jpg"]
                 created_at: "2025-10-13T10:30:00Z"
+        '400':
+          description: Bad request — invalid input data (e.g. missing text or invalid file type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Invalid request"
+                message: "The 'text' field is required."
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
+        '403':
+          description: Forbidden — authenticated user does not have permission to create posts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Forbidden"
+                message: "You are not allowed to create posts."
   /posts/search:
     get:
       tags:
         - posts
-      summary: Search posts by hashtag
-      description: Retrieve posts containing a specific hashtag. Returns posts sorted by creation date (newest first).
+      summary: Search posts by text or hashtag
+      description: Retrieve posts that match the specified text or hashtag.
       security:
         - sns_oauth: [read]
       parameters:
-        - name: hashtag
+        - name: query
           in: query
-          required: true
-          description: Hashtag to search for (without #)
+          required: false
+          description: Text to search within post content.
           schema:
             type: string
-            example: "hello"
+            example: "hello world"
+        - name: hashtag
+          in: query
+          required: false
+          description: Hashtag to search for (without # symbol).
+          schema:
+            type: string
+            example: "travel"
         - name: limit
           in: query
           description: Number of posts to return (default 10)
@@ -146,7 +180,7 @@ paths:
             default: 0
       responses:
         '200':
-          description: Successfully retrieved posts with the specified hashtag
+          description: Successfully retrieved matching posts
           content:
             application/json:
               schema:
@@ -167,45 +201,33 @@ paths:
                   images: []
                   hashtags: ["hello"]
                   created_at: "2025-10-13T15:20:00Z"
-        '404':
-          description: No posts found with the specified hashtag
-  /posts/search/text:
-    get:
-      tags:
-        - posts
-      summary: Search posts by text
-      description: Retrieve posts containing specific text. Returns posts sorted by creation date (newest first).
-      security:
-        - sns_oauth: [read]
-      parameters:
-        - name: query
-          in: query
-          required: true
-          description: Text query to search in posts
-          schema:
-            type: string
-            example: "hello world"
-        - name: limit
-          in: query
-          schema:
-            type: integer
-            default: 10
-        - name: offset
-          in: query
-          schema:
-            type: integer
-            default: 0
-      responses:
-        '200':
-          description: Successfully retrieved posts matching query
+        '400':
+          description: Bad request — missing both `query` and `hashtag`
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Post'
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "BadRequest"
+                message: "Either 'query' or 'hashtag' parameter must be provided."
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
-          description: No posts found
+          description: No posts found matching search criteria
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "NotFound"
+                message: "No posts found matching search criteria."
   /posts/{post_id}:
     get:
       tags:
@@ -241,6 +263,15 @@ paths:
                 reactions_count: 12
                 comments_count: 5
                 created_at: "2025-10-13T14:00:00Z"
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Post not found
         default:
@@ -289,6 +320,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Post'
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '403':
           description: Forbidden – user is not the author of the post
         '404':
@@ -311,6 +351,15 @@ paths:
       responses:
         '204':
           description: Post deleted successfully
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '403':
           description: Forbidden – user is not the author of the post
         '404':
@@ -356,6 +405,15 @@ paths:
                   login: "john_doe"
                 text: "This post is awesome!"
                 created_at: "2025-10-13T15:30:00Z"
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Post not found
     get:
@@ -407,6 +465,15 @@ paths:
                     login: "user1"
                   text: "Thanks!"
                   created_at: "2025-10-13T15:07:00Z"
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Post not found
   /posts/{post_id}/comments/{comment_id}:
@@ -446,6 +513,15 @@ paths:
       responses:
         '200':
           description: Comment updated successfully
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '403':
           description: Forbidden – user is not the comment author
         '404':
@@ -474,6 +550,15 @@ paths:
       responses:
         '204':
           description: Comment deleted successfully
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '403':
           description: Forbidden – user is not the comment author
         '404':
@@ -482,8 +567,8 @@ paths:
     get:
       tags:
         - reactions
-      summary: Get all reactions for a post
-      description: Retrieve a list of reactions for the specified post.
+      summary: Get reactions count for a post
+      description: Retrieve the number of reactions for each type for the specified post.
       security:
         - sns_oauth: [read]
       parameters:
@@ -495,24 +580,35 @@ paths:
             format: uuid
       responses:
         '200':
-          description: List of reactions
+          description: Count of reactions by type
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    user_id:
-                      type: string
-                      format: uuid
-                    type:
-                      type: string
-                    created_at:
-                      type: string
-                      format: date-time
+                type: object
+                additionalProperties:
+                  type: integer
+                example:
+                  like: 120
+                  love: 75
+                  haha: 10
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Post not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "NotFound"
+                message: "Post with the specified ID does not exist."
     post:
       tags:
         - reactions
@@ -566,6 +662,15 @@ paths:
                 created_at: "2025-10-13T16:00:00Z"
         '400':
           description: Invalid reaction type
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Post not found
         '409':
@@ -596,9 +701,18 @@ paths:
       responses:
         '204':
           description: Reaction removed successfully — no content returned
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Post or reaction not found
-  /auth/authorize:
+  /auth/authorizations:
     get:
       tags:
         - auth
@@ -739,7 +853,7 @@ paths:
                   message:
                     type: string
                     example: "Access token is missing, expired, or invalid"
-  /user/{user_id}:
+  /users/{user_id}:
     get:
       tags:
         - user
@@ -769,6 +883,15 @@ paths:
                 created_at: "2025-10-12T14:00:00Z"
         '400':
           description: Invalid username supplied
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: User not found
         default:
@@ -862,6 +985,15 @@ paths:
           description: User deleted
         '400':
           description: Invalid username supplied
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: User not found
         default:
@@ -870,7 +1002,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Error"
-  /user/{user_id}/follow:
+  /users/{user_id}/followers:
     post:
       tags:
         - user
@@ -895,30 +1027,6 @@ paths:
           description: Unauthorized
         '404':
           description: User not found
-  /user/{user_id}/unfollow:
-    post:
-      tags:
-        - user
-      summary: Unfollow a user
-      description: Stop following the specified user.
-      security:
-        - sns_oauth: [write]
-      parameters:
-        - name: user_id
-          in: path
-          description: The UUID of the user to unfollow
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Successfully unfollowed the user
-        '401':
-          description: Unauthorized
-        '404':
-          description: User not found
-  /user/{user_id}/followers:
     get:
       tags:
         - user
@@ -942,9 +1050,72 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: User not found
-  /user/{user_id}/following:
+          
+  /users/{user_id}/followers/{follower_id}:
+    delete:
+      tags:
+        - user
+      summary: Unfollow a user
+      description: Stop following the specified user.  
+                   `user_id` — это пользователь, на которого подписан `follower_id`.
+      security:
+        - sns_oauth: [write]
+      parameters:
+        - name: user_id
+          in: path
+          description: The UUID of the user who is being followed
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: follower_id
+          in: path
+          description: The UUID of the user who wants to unfollow
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Successfully unfollowed the user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
+        '404':
+          description: User or follower not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "NotFound"
+                message: "User or follower with the specified ID does not exist."
+  /users/{user_id}/following:
     get:
       tags:
         - user
@@ -968,6 +1139,15 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: User not found
   /images:
@@ -1000,6 +1180,15 @@ paths:
                   image_url:
                     type: string
                     example: "https://cdn.sns.com/uploads/2025/10/image123.jpg"
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
   /images/{image_id}:
     delete:
       tags:
@@ -1018,6 +1207,15 @@ paths:
       responses:
         '204':
           description: Image deleted successfully
+        '401':
+          description: Unauthorized — user is not authenticated or token is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "Unauthorized"
+                message: "Access token is missing or invalid."
         '404':
           description: Image not found
 components:
