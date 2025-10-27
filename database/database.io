@@ -1,4 +1,9 @@
 // Docs: https://dbml.dbdiagram.io/docs
+// Replication:
+// Master-slave with RF = 3(one sync + one async)
+//
+// Sharding:
+// Consistent hashing with virtual nodes by user_id
 
 Table follows {
   following_user_id uuid [not null]
